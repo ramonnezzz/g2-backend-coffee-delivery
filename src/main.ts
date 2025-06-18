@@ -4,13 +4,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // Configurar validação global
   app.useGlobalPipes(
-    // inserir as config aqui para ValidationPipe
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          return error.constraints ? Object.values(error.constraints).join(', ') : '';
+        });
+        return new Error(messages.join(', '));
+      }
+    })
   );
-  
-  // Configurar CORS
+  // Configurar CORS (permite que qualquer origem acesse a API)
   app.enableCors();
   
   await app.listen(process.env.PORT ?? 3000);
