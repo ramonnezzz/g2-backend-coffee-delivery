@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, HttpCode, Query, Patch, Delete, NotFoundException } from '@nestjs/common';
 import { CoffeesService } from './coffees.service';
 import { CreateCoffeeDto } from './dto/create-coffee.dto';
+import { UpdateCoffeeDto } from './dto/update-coffee.dto';
 
 @Controller('coffees')
 export class CoffeesController {
@@ -34,7 +35,11 @@ export class CoffeesController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.coffeesService.findOne(id);
+    const coffee = await this.coffeesService.findOne(id);
+    if (!coffee) {
+      throw new NotFoundException(`Coffee with ID ${id} not found`);
+    }
+    return coffee;
   }
 
   @Post()
@@ -43,5 +48,21 @@ export class CoffeesController {
     return this.coffeesService.create(createCoffeeDto);
   }
 
-  // adicionar outro endpoints
-} 
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateCoffeeDto: UpdateCoffeeDto) {
+    const updatedCoffee = await this.coffeesService.update(id, updateCoffeeDto);
+    if (!updatedCoffee) {
+      throw new NotFoundException(`Coffee with ID ${id} not found`);
+    }
+    return updatedCoffee;
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    const coffee = await this.coffeesService.remove(id);
+    if (!coffee) {
+      throw new NotFoundException(`Coffee with ID ${id} not found`);
+    }
+    return { message: 'Coffee deleted successfully' };
+  }
+}

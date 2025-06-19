@@ -47,32 +47,66 @@ export class CoffeesService {
   }
 
   async create(createCoffeeDto: CreateCoffeeDto) {
-    // código aqui
+    const { tags = [], ...coffeeData } = createCoffeeDto;
 
-    // return this.prisma.coffee.create({data: {}});
+    const coffee = await this.prisma.coffee.create({ data: coffeeData });
+  
+    for (const tagName of tags) {
+      let tag = await this.prisma.tag.findUnique({ where: { name: tagName } });
+  
+      if (!tag) {
+        tag = await this.prisma.tag.create({ data: { name: tagName } });
+      }
+  
+      await this.prisma.coffeeTag.create({
+        data: { coffeeId: coffee.id, tagId: tag.id },
+      });
+    }
+  
+    return this.prisma.coffee.findUnique({
+      where: { id: coffee.id },
+      include: { tags: { include: { tag: true } } },
+    });
   }
 
   async update(id: string, updateCoffeeDto: UpdateCoffeeDto) {
-    // código de implementação aqui
-
-    // Atualizar os dados do café
-    return this.prisma.coffee.update({
+    const { tags, ...coffeeData } = updateCoffeeDto;
+  
+    const coffee = await this.prisma.coffee.update({
       where: { id },
-      data: [], // seu dados atualziados iserir aqui
-      include: {
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
+      data: coffeeData,
+    });
+  
+    if (tags) {
+      await this.prisma.coffeeTag.deleteMany({ where: { coffeeId: id } });
+  
+      for (const tagName of tags) {
+        let tag = await this.prisma.tag.findUnique({ where: { name: tagName } });
+  
+        if (!tag) {
+          tag = await this.prisma.tag.create({ data: { name: tagName } });
+        }
+  
+        await this.prisma.coffeeTag.create({
+          data: { coffeeId: id, tagId: tag.id },
+        });
+      }
+    }
+  
+    return this.prisma.coffee.findUnique({
+      where: { id },
+      include: { tags: { include: { tag: true } } },
     });
   }
 
   async remove(id: string) {
-    //  1 - Verificar se o café existe
-
-    // 2 - Remover o café
+    const coffee = await this.prisma.coffee.findUnique({ where: { id } });
+  
+    if (!coffee) {
+      throw new NotFoundException(`Café com ID ${id} não encontrado`);
+    }
+  
+    await this.prisma.coffee.delete({ where: { id } });
   }
 
   async searchCoffees(params: {
